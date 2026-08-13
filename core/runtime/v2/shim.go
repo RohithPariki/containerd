@@ -598,14 +598,18 @@ func (s *shimTask) delete(ctx context.Context, sandboxed bool, removeTask func(c
 	err := s.ShimInstance.Delete(ctx)
 	if err != nil {
 		log.G(ctx).WithField("id", s.ID()).WithError(err).Error("failed to delete shim")
-	} else {
-		// remove self from the runtime task list ONLY IF successfully deleted
-		// this seems dirty but it cleans up the API across runtimes, tasks, and the service
-		removeTask(ctx, s.ID())
+		return nil, err
 	}
 
+	// remove self from the runtime task list ONLY IF successfully deleted
+	// this seems dirty but it cleans up the API across runtimes, tasks, and the service
+	removeTask(ctx, s.ID())
+
 	if shimErr != nil {
-		return nil, shimErr
+		return &runtime.Exit{
+			Status:    255,
+			Timestamp: time.Now(),
+		}, nil
 	}
 
 	return &runtime.Exit{
